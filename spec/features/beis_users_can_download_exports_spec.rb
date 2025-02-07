@@ -322,9 +322,10 @@ RSpec.feature "BEIS users can download exports" do
 
       document = CSV.parse(page.body.delete_prefix("\uFEFF"), headers: true).map(&:to_h)
       expect(document.size).to eq(2)
+      programme_1_row = document.find { |row| row["RODA identifier"] == programme_1.roda_identifier }
 
       # And each row should have the columns requested in our Example XLSX
-      expect(document.first).to match(a_hash_including({
+      expect(programme_1_row).to match(a_hash_including({
         "Partner Organisation" => programme_1.extending_organisation.name,
         "Activity level" => "Programme (level B)",
         "Parent activity" => "International Science Partnerships Fund",
