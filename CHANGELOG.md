@@ -4,6 +4,8 @@
 
 [Full changelog][unreleased]
 
+- Fix IATI XML export countries where there is only one benefitting country
+
 ## Release 169 - 2025-02-10
 
 [Full changelog][169]

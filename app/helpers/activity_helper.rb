@@ -50,6 +50,10 @@ module ActivityHelper
     Activity::DESERTIFICATION_POLICY_MARKER_CODES.key(code.to_i)
   end
 
+  def first_benefitting_country(benefitting_countries)
+    BenefittingCountry.find_by_code(benefitting_countries.first)
+  end
+
   def edit_comment_path_for(commentable, comment)
     case commentable.class.name
     when "Activity"
