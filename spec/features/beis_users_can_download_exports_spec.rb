@@ -304,7 +304,8 @@ RSpec.feature "BEIS users can download exports" do
     programme_1.comments = create_list(:comment, 2)
     programme_1.budgets = [
       create(:budget, :with_revisions, number_of_revisions: 2, financial_year: 2023, value: 1.00),
-      create(:budget, financial_year: 2024, value: 2.00)
+      create(:budget, financial_year: 2024, value: 202.00),
+      create(:budget, financial_year: 2025, value: 303.00)
     ]
     create(:programme_activity, :ispf_funded, is_oda: false)
 
@@ -355,17 +356,14 @@ RSpec.feature "BEIS users can download exports" do
         "Publish to IATI?" => "Yes",
         "Tags" => "Tactical Fund|Previously reported under OODA",
         "Budget 2023-2024" => "£101.00", # each revision adds £50 in the factories; we have 2
-        "Budget 2024-2025" => "£2.00",
-        "Budget 2025-2026" => nil,
-        "Budget 2026-2027" => nil,
-        "Budget 2027-2028" => nil,
-        "Budget 2028-2029" => nil,
+        "Budget 2024-2025" => "£202.00",
+        "Budget 2025-2026" => "£303.00",
         "Comments" => (
           a_string_matching(programme_1.comments.first.body) &
             a_string_matching("|") &
             a_string_matching(programme_1.comments.second.body)
         )
-      })).and(have_attributes(length: 36))
+      })).and(have_attributes(length: 33))
 
       # And that file should contain no level B activities for any other fund
       expect(document.none? { |row| row["RODA Identifier"] == other_fund_programme.roda_identifier }).to be true

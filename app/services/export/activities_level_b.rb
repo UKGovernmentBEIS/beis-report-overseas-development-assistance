@@ -42,66 +42,80 @@ class Export::ActivitiesLevelB
     Field.new("ODA eligibility",                           "ALL",  -> { activity.oda_eligibility }),
     Field.new("Publish to IATI?",                          "ALL",  -> { activity.publish_to_iati }),
     Field.new("Tags",                                      "ISPF", -> { activity.tags }),
-    Field.new("Budget 2023-2024",                          "ALL",  -> { budgets_by_year[2023]&.value }),
-    Field.new("Budget 2024-2025",                          "ALL",  -> { budgets_by_year[2024]&.value }),
-    Field.new("Budget 2025-2026",                          "ALL",  -> { budgets_by_year[2025]&.value }),
-    Field.new("Budget 2026-2027",                          "ALL",  -> { budgets_by_year[2026]&.value }),
-    Field.new("Budget 2027-2028",                          "ALL",  -> { budgets_by_year[2027]&.value }),
-    Field.new("Budget 2028-2029",                          "ALL",  -> { budgets_by_year[2028]&.value }),
+    # Budgets are inserted here, BEFORE_COMMENTS
     Field.new("Comments",                                  "ALL",  -> { activity.comments.map(&:body).join("|") })
   ].freeze
   # standard:enable Layout/ExtraSpacing
 
-  # Given a fund and an activity (or nil for a header row), return all the cell values in a row
-  # via #to_a
-  Row = Struct.new(:fund, :activity) do
-    def budgets_by_year
-      @budgets_by_year ||= activity.budgets.each_with_object({}) do |budget, years|
-        years[budget.financial_year.start_year] = BudgetPresenter.new(budget)
-      end
-    end
-
+  # Given a fund, an activity, and all the +fields+, return all the cell +#value+s in a row
+  # via +#to_a+. +Struct+ is needed because +@budgets_by_year+ is memoised
+  Row = Struct.new(:fund, :activity, :fields) do
     def to_a
-      return applicable_fields.map(&:name) if header?
-
-      applicable_fields.map do |field|
+      fields.map do |field|
         instance_exec(&field.value) # get the field's value from its Proc in the context of this Row
       end
     end
 
     private
 
-    def header?
-      activity.nil?
-    end
-
-    def applicable_fields
-      FIELDS.select { |field| field.fund.in? ["ALL", fund.short_name] }
+    def budgets_by_year
+      @budgets_by_year ||= activity.budgets.each_with_object({}) do |budget, years|
+        years[budget.financial_year.start_year] = BudgetPresenter.new(budget)
+      end
     end
   end
+
+  attr_reader :fund
 
   def initialize(fund:)
     @fund = fund
   end
 
-  def headers
-    Row.new(fund: @fund, activity: nil).to_a
-  end
-
+  # @return [String] the name of the file, e.g. "LevelB_Newton_Fund_2025-02-10_10-50-59.csv"
   def filename
-    "LevelB_#{@fund.name.tr(" ", "_")}_#{Time.zone.now.strftime("%Y-%m-%d_%H-%M-%S")}.csv"
+    "LevelB_#{fund.name.tr(" ", "_")}_#{Time.zone.now.strftime("%Y-%m-%d_%H-%M-%S")}.csv"
   end
 
+  # @return [Array<String>] a row of heading column names
+  def headers
+    fields.map(&:name)
+  end
+
+  # @return [Array<String>] a row of report values for an activity
   def rows
     activities.map do |activity|
-      Row.new(fund: @fund, activity: ActivityCsvPresenter.new(activity)).to_a
+      Row.new(fund:, activity: ActivityCsvPresenter.new(activity), fields:).to_a
     end
   end
 
   private
 
+  BEFORE_COMMENTS = -2
+  # @return [Array<Field>] fields for this fund, including applicable budget year fields
+  def fields
+    @fields ||= FIELDS.select { |field| field.fund.in? ["ALL", fund.short_name] }.tap do |fields|
+      fields.insert(BEFORE_COMMENTS, *applicable_budget_year_fields)
+    end
+  end
+
+  # Header and Row both need to know ahead of time the extents of the budget years in order
+  # to insert a constant number of columns. Dynamically instantiate these fields once.
+  # @return [Array<Field>] the budget fields that apply to this report
+  def applicable_budget_year_fields
+    applicable_budget_years.map do |year|
+      Field.new("Budget #{year}-#{year + 1}", "ALL", -> { budgets_by_year[year]&.value })
+    end
+  end
+
+  # @return [Array<Integer>] the sorted list of years for which this fund's activities have budgets
+  def applicable_budget_years
+    activities.each_with_object(Set.new) do |activity, years|
+      activity.budgets.each { |budget| years << budget.financial_year.start_year }
+    end.sort
+  end
+
   def activities
-    @activities ||= @fund.activity.child_activities
+    @activities ||= fund.activity.child_activities
       .includes(:organisation, :extending_organisation, :commitment, :budgets, :linked_activity, :comments)
   end
 end

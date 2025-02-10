@@ -21,6 +21,17 @@ module ExportHelpers
     end
   end
 
+  def add_budgets_from_table(table)
+    CSV.parse(table, col_sep: "|", headers: true).map do |row|
+      activity = Activity.find(row["programme_id"].strip)
+      activity.budgets << create(
+        :budget,
+        value: row["value"].strip,
+        financial_year: row["financial_year"].strip
+      )
+    end
+  end
+
   def forecasts_for_report_from_table(report, table)
     CSV.parse(table, col_sep: "|", headers: true).each do |row|
       ForecastHistory.new(
