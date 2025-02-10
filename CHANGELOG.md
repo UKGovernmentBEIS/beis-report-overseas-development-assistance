@@ -4,6 +4,8 @@
 
 [Full changelog][unreleased]
 
+- Level B export dynamic budget columns
+
 ## Release 169 - 2025-02-10
 
 [Full changelog][169]
