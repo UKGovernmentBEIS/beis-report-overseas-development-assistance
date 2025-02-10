@@ -40,12 +40,18 @@ RSpec.feature "BEIS users can view project activities as XML" do
   context "when the activity has one benefitting country" do
     before { activity.update(benefitting_countries: ["CV"]) }
 
-    it "contains data about the recipient country's region" do
+    it "contains data about the recipient country" do
       visit organisation_activity_path(organisation, activity, format: :xml)
 
-      expect(xml.at("iati-activity/recipient-region/@code").text).to eq("1030")
-      expect(xml.at("iati-activity/recipient-region/narrative").text).to eq("Western Africa, regional")
-      expect(xml.at("iati-activity/recipient-region/@percentage").text).to eq("100.0")
+      expect(xml.at("iati-activity/recipient-country/@code").text).to eq("CV")
+      expect(xml.at("iati-activity/recipient-country/narrative").text).to eq("Cabo Verde")
+      expect(xml.at("iati-activity/recipient-country/@percentage").text).to eq("100.0")
+    end
+
+    it "contains nothing about the benefitting region" do
+      visit organisation_activity_path(organisation, activity, format: :xml)
+
+      expect(xml.at("iati-activity/recipient-region")).to be_nil
     end
 
     it "contains the IATI scope element" do
@@ -125,10 +131,11 @@ RSpec.feature "BEIS users can view project activities as XML" do
   context "when the activity has a legacy recipient_region and at least one benefitting country" do
     before { activity.update(recipient_region: "489", benefitting_countries: ["CV"]) }
 
-    it "contains appropriate data about the benefitting region" do
+    it "contains appropriate data about the recipient region" do
       visit organisation_activity_path(organisation, activity, format: :xml)
 
-      expect(xml.at("iati-activity/recipient-region/@code").text).to eq(activity.benefitting_region.code)
+      expect(xml.at("iati-activity/recipient-country/@code").text).to eq(activity.benefitting_countries.first)
+      expect(xml.at("iati-activity/recipient-region")).to be_nil
     end
   end
 

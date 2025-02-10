@@ -200,6 +200,18 @@ RSpec.describe ActivityHelper, type: :helper do
     end
   end
 
+  describe "first_benefitting_countries" do
+    let(:activity) { create(:project_activity, benefitting_countries: ["DZ"]) }
+
+    it "returns the first benefitting country as a `BenefittingCountry` from an Activity's benefitting countries" do
+      benefitting_country = first_benefitting_country(activity.benefitting_countries)
+
+      expect(benefitting_country.code).to eq("DZ")
+      expect(benefitting_country.name).to eq("Algeria")
+      expect(benefitting_country).to be_a(BenefittingCountry)
+    end
+  end
+
   describe "#edit_comment_path_for" do
     let(:activity) { create(:project_activity) }
     let(:comment) { create(:comment, commentable: commentable) }

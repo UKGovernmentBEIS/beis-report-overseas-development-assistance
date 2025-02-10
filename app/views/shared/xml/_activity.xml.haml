@@ -48,9 +48,14 @@
   - if activity.iati_scope
     %activity-scope{"code" => activity.iati_scope}/
   - if activity.benefitting_countries.present?
-    - region = activity.benefitting_region
-    %recipient-region{code: region.code, percentage: "100.0", vocabulary: "1"}
-      %narrative= region.name
+    - if activity.benefitting_countries.size > 1
+      - region = activity.benefitting_region
+      %recipient-region{code: region.code, percentage: "100.0", vocabulary: "1"}
+        %narrative= region.name
+    - else
+      - country = first_benefitting_country(activity.benefitting_countries)
+      %recipient-country{"code" => country.code, percentage: "100.0"}
+        %narrative= country.name
   - elsif activity.recipient_country?
     %recipient-country{"code" => activity.recipient_country}
       %narrative= country_name_from_code(activity.recipient_country)
